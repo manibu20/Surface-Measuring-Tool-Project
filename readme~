@@ -1,5 +1,5 @@
 1. Make sure there's a USB mouse attached
 2. Run the following commands from terminal:
-	A. gcc recorder.c -o recorder
-	B. sudo ./recorder [mouse-dpi]
+	gcc recorder.c -o recorder
+	sudo ./recorder [mouse-dpi]
 

@@ -13,7 +13,7 @@
 /* This is the path to the symlink associated with the mouse-event file. 
  * It can also be obtained by calling functions like glob() or fnmatch() 
  * if there are multiple mice devices. */
-#define USB_PATH "/dev/input/event4"
+#define USB_PATH "/dev/input/by-id/usb-VMware_VMware_Virtual_USB_Mouse-if01-event-mouse"
 
 typedef enum {false, true} bool;
 
