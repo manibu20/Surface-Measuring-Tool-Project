@@ -8,12 +8,13 @@
 #include<limits.h>
 #include<signal.h>
 #include<stdlib.h>
+#include<glob.h>
 
 
 /* This is the path to the symlink associated with the mouse-event file. 
  * It can also be obtained by calling functions like glob() or fnmatch() 
  * if there are multiple mice devices. */
-#define USB_PATH "/dev/input/event4"
+#define USB_PATH "/dev/input/by-id/usb-*-event-mouse"
 
 typedef enum {false, true} bool;
 
@@ -38,13 +39,16 @@ int main(int argc, char *argv[]) {
 	ssize_t bytes_read;
 	int x_axis=0,y_axis=0;
 	int events_counter=0;
+	glob_t g;
+	int ret_code;
+	int dpi;
 	
 	if (argc!=2) {
 		fprintf(stderr, "one argument required: mouse dpi\n");
 		return 1;
 	}
 
-	const int dpi=atoi(argv[1]);
+	dpi=atoi(argv[1]);
 
 
 	/* registering for a SIGINT signal */
@@ -57,9 +61,23 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	/* opening device file associated with USB */
+	/* looking for a mouse-event file(s) */ 
+	ret_code=glob(USB_PATH, GLOB_ERR, NULL , &g);
+
+	if (ret_code==GLOB_NOMATCH) {
+		fprintf(stderr, "No mouse found\n");
+		return 1;
+	}
+	else if (ret_code) {
+		fprintf(stderr, "glob() error: %s\n", strerror(errno));
+		return 1;
+	}
+
+
+	/* opening device file associated with USB; */
+	/* this will pick the first USB mouse-file it encounters, if several are attached */
 	do {
-		device_fd=open(USB_PATH, O_RDONLY);
+		device_fd=open(g.gl_pathv[0], O_RDONLY);
 
 	/* in case of EINTR errno value - keep on trying */
 	} while (device_fd==-1 && errno==EINTR);
@@ -90,11 +108,9 @@ int main(int argc, char *argv[]) {
 
 	while (not_interrupted) {
 
-		
-
 		/* reading the next event; the events will be sent from kernel as frames of fixed size */
 		bytes_read=read(device_fd, &event, sizeof(event));
-		
+
 		/* in case of an error */
 		if (bytes_read==-1) {
 			/* if read() was interrupted */
@@ -150,7 +166,7 @@ int main(int argc, char *argv[]) {
 		fflush(stdout);
 	}
 
-	printf("\n\nRecorded %d events.\n", events_counter);
+	printf("\n\n%d events captured.\n", events_counter);
 	printf("Total movement:\n");
 	printf("On x axis: dots (\"pixels\"): %6d \tinches: %8.2f \tcentimeters: %8.2f\n",
 				x_axis, (float)x_axis/dpi, ((float)x_axis/dpi)*2.54);
@@ -158,6 +174,7 @@ int main(int argc, char *argv[]) {
 				y_axis, (float)y_axis/dpi, ((float)y_axis/dpi)*2.54);
 	return 0;
 }
+
 
 
 void handle_interrupt(int signum) {
